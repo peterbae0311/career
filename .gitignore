@@ -1,37 +1,46 @@
-# 환경 변수 (절대 커밋 금지)
-.env
-.env.local
-.env.*.local
+# dependencies
+/node_modules
+/.pnp
+.pnp.js
+.yarn/install-state.gz
 
-# 의존성
-node_modules/
+# next.js
+/.next/
+/out/
 
-# 빌드 결과물
-.next/
-dist/
-build/
-out/
+# production
+/build
 
-# 시스템 파일
+# misc
 .DS_Store
-Thumbs.db
+*.pem
 
-# IDE
-.vscode/
-.idea/
-
-# 로그
-*.log
+# debug
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
 
-# Claude Code 내부 파일
+# local env files
+.env*.local
+.env
+
+# claude code
 .claude/
 
-# Playwright MCP 스냅샷
+# playwright artifacts
 .playwright-mcp/
 
-# Claude Code 세션 요약 파일
-*.txt
-*.png
-*.pptx
-tsconfig.tsbuildinfo
+# temp office files
+~$*
+
+# screenshots & conversation logs
+화면\ 캡처\ *.png
+2026-*-command-message*.txt
+2026-*-local-command-caveat*.txt
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts
