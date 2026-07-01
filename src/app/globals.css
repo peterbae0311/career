@@ -1,0 +1,11 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  input:not([type="checkbox"]):not([type="radio"]),
+  textarea {
+    color: inherit;
+    -webkit-text-fill-color: currentColor;
+  }
+}
