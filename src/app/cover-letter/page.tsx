@@ -1,9 +1,25 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, startTransition } from 'react';
 import { supabase, CoverLetterRef, CoverLetterQuestion } from '@/lib/supabase';
 
 type DraftUrl = { id?: string; title: string; url: string; sort_order: number };
+
+type Difficulty = 'high' | 'medium' | 'low';
+interface InterviewQ {
+  id:            string;
+  difficulty:    Difficulty;
+  question:      string;
+  follow_ups:    string[];
+  purpose:       string;
+  competency:    string;
+  intent:        string;
+  good_points:   string[];
+  avoid:         string[];
+  mistakes:      string[];
+  sample_answer: string;
+}
+const DIFF_KO: Record<Difficulty, string> = { high: '상', medium: '중', low: '하' };
 
 const NAV_H = 'h-[calc(100vh-56px)]';
 
@@ -18,7 +34,7 @@ function Icon({ d, className = 'w-5 h-5' }: { d: string; className?: string }) {
 export default function CoverLetterPage() {
   const [refs,       setRefs]       = useState<CoverLetterRef[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [tab,        setTab]        = useState<'ref' | 'questions'>('ref');
+  const [tab,        setTab]        = useState<'ref' | 'questions' | 'interview'>('ref');
 
   const [refForm, setRefForm] = useState({ company_name: '', recruitment_notice: '', notes: '' });
   const [urls,    setUrls]    = useState<DraftUrl[]>([]);
@@ -29,6 +45,11 @@ export default function CoverLetterPage() {
   const [savingQId,     setSavingQId]     = useState<string | null>(null);
   const [generatingQId, setGeneratingQId] = useState<string | null>(null);
 
+  const [interviewQs,         setInterviewQs]         = useState<InterviewQ[]>([]);
+  const [selectedIQId,        setSelectedIQId]        = useState<string | null>(null);
+  const [generatingInterview, setGeneratingInterview] = useState<'all' | Difficulty | null>(null);
+  const [regeneratingAnswer,  setRegeneratingAnswer]  = useState(false);
+
   const selectedRef = refs.find(r => r.id === selectedId) ?? null;
   const selectedQ   = questions.find(q => q.id === selectedQId) ?? null;
 
@@ -38,7 +59,10 @@ export default function CoverLetterPage() {
     if (!selectedId) return;
     fetchUrls(selectedId);
     fetchQuestions(selectedId);
+    fetchInterviewQs(selectedId);
     setSelectedQId(null);
+    setSelectedIQId(null);
+    setInterviewQs([]);
   }, [selectedId]);
 
   useEffect(() => {
@@ -113,6 +137,31 @@ export default function CoverLetterPage() {
     setQuestions((data ?? []) as CoverLetterQuestion[]);
   }
 
+  async function fetchInterviewQs(refId: string) {
+    const { data } = await supabase
+      .from('interview_questions')
+      .select('*')
+      .eq('ref_id', refId)
+      .order('sort_order');
+    if (data && data.length > 0) {
+      const mapped = data.map(r => ({
+        id:            r.id as string,
+        difficulty:    r.difficulty as Difficulty,
+        question:      r.question as string,
+        follow_ups:    (r.follow_ups as string[]) ?? [],
+        purpose:       r.purpose as string,
+        competency:    r.competency as string,
+        intent:        r.intent as string,
+        good_points:   (r.good_points as string[]) ?? [],
+        avoid:         (r.avoid as string[]) ?? [],
+        mistakes:      (r.mistakes as string[]) ?? [],
+        sample_answer: r.sample_answer as string,
+      }));
+      setInterviewQs(mapped);
+      setSelectedIQId(mapped[0].id);
+    }
+  }
+
   async function addQuestion() {
     if (!selectedId) return;
     const { data } = await supabase
@@ -174,7 +223,85 @@ export default function CoverLetterPage() {
     }
   }
 
-  const answerLen  = selectedQ?.answer?.length ?? 0;
+  async function generateInterviewQs(difficulty: 'all' | Difficulty) {
+    if (!selectedId) return;
+    setGeneratingInterview(difficulty);
+    try {
+      const res = await fetch('/api/cover-letter/interview', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          ref_id:                 selectedId,
+          company_name:           selectedRef?.company_name,
+          recruitment_notice:     selectedRef?.recruitment_notice,
+          notes:                  selectedRef?.notes,
+          urls:                   urls.map(u => ({ title: u.title, url: u.url })),
+          cover_letter_questions: questions.map(q => q.question).filter(Boolean),
+          difficulty,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      if (difficulty === 'all') {
+        setInterviewQs(data.questions);
+        setSelectedIQId(data.questions[0]?.id ?? null);
+      } else {
+        setInterviewQs(prev => {
+          const merged = [
+            ...prev.filter(q => q.difficulty !== difficulty),
+            ...data.questions,
+          ].sort((a, b) => a.sort_order - b.sort_order);
+          setSelectedIQId(merged[0]?.id ?? null);
+          return merged;
+        });
+      }
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '면접 질문 생성 중 오류가 발생했습니다.');
+    } finally {
+      setGeneratingInterview(null);
+    }
+  }
+
+  const selectedIQ = interviewQs.find(q => q.id === selectedIQId) ?? null;
+
+  function updateInterviewQLocal(id: string, question: string) {
+    setInterviewQs(prev => prev.map(q => q.id === id ? { ...q, question } : q));
+  }
+
+  async function saveInterviewQuestion(id: string, question: string) {
+    if (id.startsWith('tmp-')) return;
+    await supabase.from('interview_questions').update({ question }).eq('id', id);
+  }
+
+  async function regenAnswer() {
+    if (!selectedIQ) return;
+    setRegeneratingAnswer(true);
+    try {
+      const res = await fetch('/api/cover-letter/interview/regen', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          question_id:        selectedIQ.id,
+          question:           selectedIQ.question,
+          company_name:       selectedRef?.company_name,
+          recruitment_notice: selectedRef?.recruitment_notice,
+          notes:              selectedRef?.notes,
+          urls:               urls.map(u => ({ title: u.title, url: u.url })),
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setInterviewQs(prev => prev.map(q =>
+        q.id === selectedIQ.id ? { ...q, sample_answer: data.sample_answer } : q
+      ));
+    } catch (err) {
+      alert(err instanceof Error ? err.message : '답변 생성 중 오류가 발생했습니다.');
+    } finally {
+      setRegeneratingAnswer(false);
+    }
+  }
+
+  const answerLen  = (selectedQ?.answer?.split('\n\n\n[SAP 용어 참고]')[0] ?? '').length;
   const answerOver = !!(selectedQ?.char_limit && answerLen > selectedQ.char_limit);
 
   return (
@@ -210,9 +337,9 @@ export default function CoverLetterPage() {
             <li key={ref.id}>
               <button
                 onClick={() => { setSelectedId(ref.id); setTab('ref'); }}
-                className={`w-full text-left pr-4 pl-3 py-2.5 border-b border-gray-100 border-l-4 text-sm truncate transition-colors ${
+                className={`w-full text-left pr-4 pl-3 py-2.5 border-b border-gray-100 border-l-4 text-sm font-bold truncate transition-colors ${
                   selectedId === ref.id
-                    ? 'bg-blue-100 border-l-blue-500 text-blue-700 font-medium'
+                    ? 'bg-blue-100 border-l-blue-500 text-blue-700'
                     : 'text-gray-700 hover:bg-gray-50 border-l-transparent'
                 }`}
               >
@@ -237,13 +364,13 @@ export default function CoverLetterPage() {
 
             {/* ── 탭 헤더 ────────────────────────────────────────── */}
             <div className="shrink-0 border-b border-gray-200 flex">
-              {([['ref', '기본 정보'], ['questions', '질의 문항']] as const).map(([id, label]) => (
+              {([['ref', '기본 정보'], ['questions', '자기소개서 질문'], ['interview', '면접 예상 질문']] as const).map(([id, label]) => (
                 <button
                   key={id}
                   onClick={() => setTab(id)}
-                  className={`px-12 py-3 text-sm border-b-2 transition-colors ${
+                  className={`px-12 py-3 text-sm font-bold border-b-2 transition-colors ${
                     tab === id
-                      ? 'border-blue-500 text-blue-700 font-medium'
+                      ? 'border-blue-500 text-blue-700'
                       : 'border-transparent text-gray-400 hover:text-gray-700'
                   }`}
                 >
@@ -402,7 +529,7 @@ export default function CoverLetterPage() {
                           <span className="sr-only">선택</span>
                         </th>
                         <th className="px-4 py-2 text-center font-medium text-blue-700 border-r border-blue-100">
-                          질의 문항
+                          질문
                         </th>
                         <th className="w-28 px-3 py-2 text-center font-medium text-blue-700 border-r border-blue-100">
                           글자수 제한
@@ -429,7 +556,7 @@ export default function CoverLetterPage() {
                               className="w-4 h-4 accent-blue-600"
                             />
                           </td>
-                          <td className="px-4 py-2 border-r border-gray-200" onClick={e => e.stopPropagation()}>
+                          <td className="px-4 py-2 border-r border-gray-200" onClick={() => setSelectedQId(q.id)}>
                             <input
                               value={q.question}
                               onChange={e => updateQuestionLocal(q.id, { question: e.target.value })}
@@ -441,7 +568,7 @@ export default function CoverLetterPage() {
                               placeholder="자기소개서 문항을 입력하세요"
                             />
                           </td>
-                          <td className="px-3 py-2 text-center border-r border-gray-200" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center border-r border-gray-200" onClick={() => setSelectedQId(q.id)}>
                             <input
                               type="number"
                               value={q.char_limit ?? ''}
@@ -524,6 +651,193 @@ export default function CoverLetterPage() {
                       위 목록에서 문항을 선택하세요
                     </div>
                   )}
+                </div>
+
+              </div>
+            )}
+
+            {/* ── 탭: 면접 예상 질문 ─────────────────────────────── */}
+            {tab === 'interview' && (
+              <div className="flex flex-1 overflow-hidden">
+
+                {/* 왼쪽: 난이도별 섹션 */}
+                <div className="flex flex-col overflow-hidden" style={{ width: '58%' }}>
+                  <div className="flex-1 overflow-y-auto">
+                    {(['high', 'medium', 'low'] as const).map(diff => {
+                      const dqs = interviewQs.filter(q => q.difficulty === diff);
+                      const isRunning = generatingInterview === diff;
+                      return (
+                        <div key={diff} className="border-b-2 border-gray-300">
+
+                          {/* 섹션 헤더 */}
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-white">
+                            <span className="text-sm font-bold text-gray-800">난이도 : {DIFF_KO[diff]}</span>
+                            <button
+                              onClick={() => generateInterviewQs(diff)}
+                              disabled={generatingInterview !== null}
+                              className="flex items-center gap-1.5 px-3 py-1 text-sm font-bold border border-gray-300 rounded bg-white hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            >
+                              {isRunning && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                              {isRunning ? '생성 중...' : '질문 생성'}
+                            </button>
+                          </div>
+
+                          {/* 질문 테이블 */}
+                          <table className="w-full border-collapse text-sm">
+                            <thead>
+                              <tr className="bg-gray-100 border-y border-gray-200">
+                                <th className="w-12 px-3 py-1.5 text-center font-medium text-gray-600 border-r border-gray-200">NO</th>
+                                <th className="px-4 py-1.5 text-center font-medium text-gray-600">예상 질문</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {Array.from({ length: 10 }).map((_, i) => {
+                                const q = dqs[i];
+                                return (
+                                  <tr
+                                    key={q?.id ?? `empty-${diff}-${i}`}
+                                    className={`border-b border-gray-100 transition-colors ${
+                                      selectedIQId === q?.id ? 'bg-yellow-50' : q ? 'hover:bg-gray-50' : ''
+                                    }`}
+                                  >
+                                    <td
+                                      className="px-3 py-2 text-center text-gray-400 border-r border-gray-100 whitespace-nowrap cursor-pointer"
+                                      onClick={() => q && setSelectedIQId(q.id)}
+                                    >{i + 1}</td>
+                                    <td className="px-4 py-1.5 text-gray-700">
+                                      {q ? (
+                                        <input
+                                          key={q.id}
+                                          defaultValue={q.question}
+                                          onFocus={() => startTransition(() => setSelectedIQId(q.id))}
+                                          onBlur={e => {
+                                            const val = e.currentTarget.value;
+                                            if (val !== q.question) {
+                                              updateInterviewQLocal(q.id, val);
+                                              saveInterviewQuestion(q.id, val);
+                                            }
+                                          }}
+                                          className="w-full bg-transparent text-sm text-gray-700 focus:outline-none leading-relaxed cursor-text"
+                                          placeholder="질문을 입력하세요"
+                                        />
+                                      ) : isRunning ? (
+                                        <span className="text-gray-300 text-xs">생성 중...</span>
+                                      ) : null}
+                                    </td>
+                                  </tr>
+                                );
+                              })}
+                            </tbody>
+                          </table>
+
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* 구분선 */}
+                <div className="w-px bg-gray-200 shrink-0" />
+
+                {/* 오른쪽: 답변 보기 */}
+                <div className="flex flex-col flex-1 overflow-hidden">
+
+                  {/* 헤더 */}
+                  <div className="shrink-0 px-4 py-2.5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <span className="text-sm font-bold text-gray-700">답변 보기</span>
+                    {selectedIQ && (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={regenAnswer}
+                          disabled={regeneratingAnswer}
+                          className="flex items-center gap-1.5 px-3 py-1 text-sm font-bold border border-gray-300 rounded bg-white hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                          {regeneratingAnswer
+                            ? <><span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />생성 중...</>
+                            : '답변 다시생성'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const text = [
+                              `[질문] ${selectedIQ.question}`,
+                              '',
+                              `[모범 답변]\n${selectedIQ.sample_answer}`,
+                              '',
+                              selectedIQ.follow_ups.length > 0
+                                ? `[꼬리 질문]\n${selectedIQ.follow_ups.map(f => `• ${f}`).join('\n')}`
+                                : '',
+                              `[평가 의도]\n목적: ${selectedIQ.purpose}\n역량: ${selectedIQ.competency}\n의도: ${selectedIQ.intent}`,
+                            ].filter(Boolean).join('\n');
+                            navigator.clipboard.writeText(text);
+                          }}
+                          className="p-1 text-gray-400 hover:text-gray-700 transition-colors rounded"
+                          title="클립보드 복사"
+                        >
+                          <Icon d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* 답변 내용 */}
+                  <div className="flex-1 overflow-y-auto px-5 py-4">
+                    {selectedIQ ? (
+                      <div className="space-y-5 text-sm">
+                        <div>
+                          <p className="font-bold text-gray-800 mb-2">모범 답변</p>
+                          <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{selectedIQ.sample_answer}</p>
+                        </div>
+                        {selectedIQ.follow_ups.length > 0 && (
+                          <>
+                            <hr className="border-gray-300" />
+                            <div>
+                              <p className="font-bold text-gray-800 mb-2">꼬리 질문</p>
+                              <ul className="space-y-1">
+                                {selectedIQ.follow_ups.map((f, i) => (
+                                  <li key={i} className="text-gray-600">• {f}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          </>
+                        )}
+                        <div>
+                          <p className="font-bold text-gray-800 mb-2">평가 의도</p>
+                          <div className="space-y-1 text-gray-600">
+                            <p><span className="font-medium text-gray-700">목적: </span>{selectedIQ.purpose}</p>
+                            <p><span className="font-medium text-gray-700">역량: </span>{selectedIQ.competency}</p>
+                            <p><span className="font-medium text-gray-700">의도: </span>{selectedIQ.intent}</p>
+                          </div>
+                        </div>
+                        <div>
+                          <p className="font-bold text-gray-800 mb-2">답변 가이드</p>
+                          <div className="space-y-2">
+                            {selectedIQ.good_points.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold text-green-700 mb-1">✓ 좋은 답변 포인트</p>
+                                {selectedIQ.good_points.map((p, i) => <p key={i} className="text-xs text-gray-600 ml-2">• {p}</p>)}
+                              </div>
+                            )}
+                            {selectedIQ.avoid.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold text-red-600 mb-1">✗ 피해야 할 답변</p>
+                                {selectedIQ.avoid.map((p, i) => <p key={i} className="text-xs text-gray-600 ml-2">• {p}</p>)}
+                              </div>
+                            )}
+                            {selectedIQ.mistakes.length > 0 && (
+                              <div>
+                                <p className="text-xs font-bold text-orange-600 mb-1">⚠ 자주 하는 실수</p>
+                                {selectedIQ.mistakes.map((p, i) => <p key={i} className="text-xs text-gray-600 ml-2">• {p}</p>)}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                        왼쪽 질문을 클릭하면 답변이 표시됩니다
+                      </div>
+                    )}
+                  </div>
                 </div>
 
               </div>

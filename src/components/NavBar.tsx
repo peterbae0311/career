@@ -6,7 +6,7 @@ import { usePathname } from 'next/navigation';
 const TABS = [
   {
     href:  '/cover-letter',
-    label: '자기소개서',
+    label: '자기소개서 / 면접 준비',
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -34,37 +34,35 @@ export default function NavBar() {
 
   return (
     <header className="bg-white border-b border-gray-100 shadow-sm sticky top-0 z-20">
-      <div className="max-w-6xl mx-auto px-4">
-        <div className="flex items-center h-14 gap-2">
-          {/* 앱 로고 */}
-          <div className="flex items-center gap-2 mr-6 shrink-0">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                  d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-              </svg>
-            </div>
-            <span className="font-bold text-gray-900">경력 관리</span>
+      <div className="flex items-center h-14">
+        {/* 앱 로고 — 사이드바(20%) 너비에 맞춤 */}
+        <div className="w-[20%] shrink-0 flex items-center gap-2 px-4 border-r border-gray-200">
+          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+            <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            </svg>
           </div>
-
-          {/* 탭 메뉴 */}
-          <nav className="flex gap-1">
-            {TABS.map(tab => (
-              <Link
-                key={tab.href}
-                href={tab.href}
-                className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
-                  isActive(tab.href)
-                    ? 'bg-blue-50 text-blue-700'
-                    : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
-                }`}
-              >
-                {tab.icon}
-                {tab.label}
-              </Link>
-            ))}
-          </nav>
+          <span className="font-bold text-gray-900">경력 관리</span>
         </div>
+
+        {/* 탭 메뉴 — 본문 영역(80%) 시작점에 맞춤 */}
+        <nav className="flex gap-1 px-2">
+          {TABS.map(tab => (
+            <Link
+              key={tab.href}
+              href={tab.href}
+              className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-bold transition-colors ${
+                isActive(tab.href)
+                  ? 'bg-blue-50 text-blue-700'
+                  : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
+              }`}
+            >
+              {tab.icon}
+              {tab.label}
+            </Link>
+          ))}
+        </nav>
       </div>
     </header>
   );

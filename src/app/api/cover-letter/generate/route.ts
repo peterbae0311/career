@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { serverEnv } from '@/lib/env.server';
+import { appendSapGlossary } from '@/lib/sap-glossary';
 
 const OR_URL   = 'https://openrouter.ai/api/v1/chat/completions';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -79,7 +80,7 @@ ${charInstruction}
         if (res.ok) {
           const data = await res.json();
           let answer = sanitizeKorean((data.choices?.[0]?.message?.content ?? '').trim());
-          answer = truncate(answer, char_limit);
+          answer = appendSapGlossary(truncate(answer, char_limit));
           return NextResponse.json({ answer, char_count: answer.length, model });
         }
 
@@ -131,6 +132,7 @@ ${charInstruction}
           }
         }
 
+        answer = appendSapGlossary(answer);
         return NextResponse.json({ answer, char_count: answer.length, model: GROQ_MODEL });
       }
 
