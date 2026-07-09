@@ -14,19 +14,39 @@ const OR_MODELS = [
 ];
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
-async function fetchText(url: string, headers: Record<string, string>, body: object): Promise<string | null> {
+function extractErrorMessage(errBody: string): string {
+  try {
+    const parsed = JSON.parse(errBody);
+    return parsed?.error?.metadata?.raw ?? parsed?.error?.message ?? errBody.slice(0, 200);
+  } catch {
+    return errBody.slice(0, 200);
+  }
+}
+
+async function fetchText(url: string, headers: Record<string, string>, body: Record<string, unknown>): Promise<{ text: string | null; error?: string }> {
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errBody = await res.text();
+      const message = extractErrorMessage(errBody);
+      console.error(`[interview/regen] ${body.model} 호출 실패: ${res.status} ${errBody.slice(0, 300)}`);
+      return { text: null, error: message };
+    }
     const data = await res.json();
-    return (data.choices?.[0]?.message?.content ?? '').trim() || null;
-  } catch {
-    return null;
+    return { text: (data.choices?.[0]?.message?.content ?? '').trim() || null };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[interview/regen] ${body.model} 호출 예외:`, e);
+    return { text: null, error: message };
   }
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 export async function POST(request: NextRequest) {
@@ -65,24 +85,40 @@ export async function POST(request: NextRequest) {
   ];
 
   let sample_answer: string | null = null;
+  let lastError: string | undefined;
 
   if (serverEnv.openrouterApiKey) {
     for (const model of OR_MODELS) {
-      sample_answer = await fetchText(OR_URL, { Authorization: `Bearer ${serverEnv.openrouterApiKey}` }, {
+      const result = await fetchText(OR_URL, { Authorization: `Bearer ${serverEnv.openrouterApiKey}` }, {
         model, max_tokens: 1000, messages,
       });
+      sample_answer = result.text;
+      if (result.error) lastError = result.error;
       if (sample_answer) break;
     }
   }
 
   if (!sample_answer && serverEnv.groqApiKey) {
-    sample_answer = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
+    let result = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
       model: GROQ_MODEL, max_tokens: 1000, temperature: 0.85, messages,
     });
+    sample_answer = result.text;
+    if (result.error) lastError = result.error;
+
+    // Groq가 마지막 보루이므로, 일시적 rate-limit 대비 1회 재시도
+    if (!sample_answer) {
+      await sleep(1500);
+      result = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
+        model: GROQ_MODEL, max_tokens: 1000, temperature: 0.85, messages,
+      });
+      sample_answer = result.text;
+      if (result.error) lastError = result.error;
+    }
   }
 
   if (!sample_answer) {
-    return NextResponse.json({ error: 'AI 답변 생성에 실패했습니다.' }, { status: 500 });
+    const reason = lastError ? ` (${lastError})` : '';
+    return NextResponse.json({ error: `AI 답변 생성에 실패했습니다.${reason}` }, { status: 500 });
   }
 
   // DB 업데이트

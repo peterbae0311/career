@@ -287,6 +287,10 @@ export default function CoverLetterPage() {
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error);
+      if (data.questions.length === 0) {
+        const reason = data.error ? `\n\n(${data.error})` : '';
+        throw new Error(`AI 응답 생성에 실패했습니다. 잠시 후 다시 시도해주세요. 기존 질문은 유지됩니다.${reason}`);
+      }
       if (difficulty === 'all') {
         setInterviewQs(data.questions);
         setSelectedIQId(data.questions[0]?.id ?? null);

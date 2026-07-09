@@ -31,19 +31,39 @@ function extractJson(text: string): unknown[] | null {
   }
 }
 
-async function fetchText(url: string, headers: Record<string, string>, body: object): Promise<string | null> {
+function extractErrorMessage(errBody: string): string {
+  try {
+    const parsed = JSON.parse(errBody);
+    return parsed?.error?.metadata?.raw ?? parsed?.error?.message ?? errBody.slice(0, 200);
+  } catch {
+    return errBody.slice(0, 200);
+  }
+}
+
+async function fetchText(url: string, headers: Record<string, string>, body: Record<string, unknown>): Promise<{ text: string | null; error?: string }> {
   try {
     const res = await fetch(url, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', ...headers },
       body: JSON.stringify(body),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errBody = await res.text();
+      const message = extractErrorMessage(errBody);
+      console.error(`[interview] ${body.model} 호출 실패: ${res.status} ${errBody.slice(0, 300)}`);
+      return { text: null, error: message };
+    }
     const data = await res.json();
-    return (data.choices?.[0]?.message?.content ?? '').trim() || null;
-  } catch {
-    return null;
+    return { text: (data.choices?.[0]?.message?.content ?? '').trim() || null };
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e);
+    console.error(`[interview] ${body.model} 호출 예외:`, e);
+    return { text: null, error: message };
   }
+}
+
+function sleep(ms: number) {
+  return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 function toStrArr(v: unknown): string[] {
@@ -69,29 +89,48 @@ function mapRaw(q: Record<string, unknown>, diff: Difficulty, i: number) {
 async function generateForDifficulty(
   diff: Difficulty,
   messages: { role: string; content: string }[],
-): Promise<{ questions: ReturnType<typeof mapRaw>[]; model: string | null }> {
+): Promise<{ questions: ReturnType<typeof mapRaw>[]; model: string | null; error?: string }> {
   let text: string | null = null;
   let usedModel: string | null = null;
+  let lastError: string | undefined;
 
   if (serverEnv.openrouterApiKey) {
     for (const model of OR_MODELS) {
-      text = await fetchText(OR_URL, { Authorization: `Bearer ${serverEnv.openrouterApiKey}` }, {
+      const result = await fetchText(OR_URL, { Authorization: `Bearer ${serverEnv.openrouterApiKey}` }, {
         model, max_tokens: 4000, messages,
       });
+      text = result.text;
+      if (result.error) lastError = result.error;
       if (text) { usedModel = model; break; }
     }
   }
 
   if (!text && serverEnv.groqApiKey) {
-    text = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
+    let result = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
       model: GROQ_MODEL, max_tokens: 4000, temperature: 0.7, messages,
     });
+    text = result.text;
+    if (result.error) lastError = result.error;
     if (text) usedModel = GROQ_MODEL;
+
+    // Groq가 마지막 보루이므로, 일시적 rate-limit 대비 1회 재시도
+    if (!text) {
+      await sleep(1500);
+      result = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
+        model: GROQ_MODEL, max_tokens: 4000, temperature: 0.7, messages,
+      });
+      text = result.text;
+      if (result.error) lastError = result.error;
+      if (text) usedModel = GROQ_MODEL;
+    }
   }
 
-  if (!text) return { questions: [], model: null };
+  if (!text) return { questions: [], model: null, error: lastError };
   const raw = extractJson(text);
-  if (!raw) return { questions: [], model: usedModel };
+  if (!raw) {
+    console.error(`[interview] JSON 파싱 실패 (diff=${diff}), 원본 응답 끝부분:`, text.slice(-300));
+    return { questions: [], model: usedModel, error: '응답을 해석하지 못했습니다 (형식 오류)' };
+  }
 
   return {
     questions: (raw as Record<string, unknown>[]).slice(0, 10).map((q, i) => mapRaw(q, diff, i)),
@@ -147,14 +186,20 @@ export async function POST(request: NextRequest) {
   // AI 생성 — 순차 실행 (병렬 시 Groq TPM 한도 초과로 중간 난이도 누락 방지)
   const generated: ReturnType<typeof mapRaw>[] = [];
   const models: Partial<Record<Difficulty, string>> = {};
+  let lastError: string | undefined;
   for (const diff of difficulties) {
     const result = await generateForDifficulty(diff, makeMessages(diff));
     generated.push(...result.questions);
     if (result.model) models[diff] = result.model;
+    if (result.error) lastError = result.error;
   }
 
   if (!ref_id || generated.length === 0) {
-    return NextResponse.json({ questions: generated.map((q, i) => ({ ...q, id: `tmp-${i}` })), models });
+    return NextResponse.json({
+      questions: generated.map((q, i) => ({ ...q, id: `tmp-${i}` })),
+      models,
+      error: lastError,
+    });
   }
 
   // DB 저장: 해당 난이도 기존 데이터 삭제 후 신규 삽입
