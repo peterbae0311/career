@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { serverEnv } from '@/lib/env.server';
 import { supabase } from '@/lib/supabase';
+import { DIFF_LABEL, DEFAULT_INTERVIEW_PROMPT, type Difficulty } from '@/lib/interviewPrompts';
 
 const OR_URL   = 'https://openrouter.ai/api/v1/chat/completions';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -13,16 +14,8 @@ const OR_MODELS = [
 ];
 const GROQ_MODEL = 'llama-3.3-70b-versatile';
 
-type Difficulty = 'high' | 'medium' | 'low';
-
 // 난이도별 sort_order 오프셋 (high→0, medium→10, low→20)
 const DIFF_OFFSET: Record<Difficulty, number> = { high: 0, medium: 10, low: 20 };
-
-const DIFF_LABEL: Record<Difficulty, string> = {
-  high:   '상(고급) — 심층 직무·기술·전략 질문',
-  medium: '중(중급) — 경험·역량·직무이해 질문',
-  low:    '하(기초) — 자기소개·지원동기·기본인성 질문',
-};
 
 function extractJson(text: string): unknown[] | null {
   const cleaned = text.replace(/```(?:json)?\n?/g, '').replace(/```/g, '').trim();
@@ -114,7 +107,10 @@ export async function POST(request: NextRequest) {
     urls,
     cover_letter_questions,
     difficulty,
+    prompts,
   } = await request.json();
+
+  const customPrompts = (prompts ?? {}) as Partial<Record<Difficulty, string>>;
 
   const contextParts: string[] = [];
   if (company_name)       contextParts.push(`회사/기관명: ${company_name}`);
@@ -130,41 +126,16 @@ export async function POST(request: NextRequest) {
 반드시 순수 JSON 배열만 출력합니다. 마크다운·설명·코드블록 없이 JSON 배열만 반환하세요.
 오직 한국어로만 작성합니다.`;
 
-  const makeMessages = (diff: Difficulty) => [
-    { role: 'system', content: systemPrompt },
-    {
-      role: 'user',
-      content: `다음 정보를 바탕으로 난이도 "${DIFF_LABEL[diff]}" 면접 예상 질문 10개를 생성하세요.
-
-## 회사/기관 정보
-${contextParts.join('\n\n') || '(정보 없음)'}
-
-## 질문 유형 (균형 있게 포함)
-자기소개, 지원동기, 인성, 직무, 기술, 상황(Situational), 행동(Behavioral), STAR기반, 문제해결, 리더십, 협업, 갈등해결, 커뮤니케이션, 실패경험, 성과경험, 가치관, 기업이해, 최신산업이슈, 압박면접
-
-## 수행 원칙
-- 실제 면접관이 사용할 법한 자연스러운 표현을 사용합니다.
-- 추상적이거나 중복되는 질문은 피합니다.
-- 입력 정보와 관련성이 높은 질문을 우선합니다.
-- 단순 암기형보다 사고력·경험을 평가하는 질문을 우선합니다.
-- sample_answer는 반드시 4문장 이상으로 작성하며, STAR 기법(상황·과제·행동·결과)을 자연스럽게 녹여 구체적이고 진정성 있게 작성합니다.
-
-## 출력 형식 (JSON 배열만)
-[
-  {
-    "question": "질문 내용",
-    "follow_ups": ["꼬리질문1", "꼬리질문2", "꼬리질문3"],
-    "purpose": "이 질문의 목적",
-    "competency": "평가 역량",
-    "intent": "면접관의 의도",
-    "good_points": ["좋은 답변 포인트1", "좋은 답변 포인트2"],
-    "avoid": ["피해야 할 답변1"],
-    "mistakes": ["자주 하는 실수1"],
-    "sample_answer": "모범 답변 예시 (최소 4문장 이상, STAR 기법 포함)"
-  }
-]`,
-    },
-  ];
+  const makeMessages = (diff: Difficulty) => {
+    const template = customPrompts[diff]?.trim() || DEFAULT_INTERVIEW_PROMPT;
+    const content = template
+      .split('{{context}}').join(contextParts.join('\n\n') || '(정보 없음)')
+      .split('{{difficulty}}').join(DIFF_LABEL[diff]);
+    return [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content },
+    ];
+  };
 
   const difficulties: Difficulty[] = difficulty === 'all' ? ['high', 'medium', 'low'] : [difficulty as Difficulty];
 

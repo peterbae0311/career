@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { serverEnv } from '@/lib/env.server';
 import { supabase } from '@/lib/supabase';
+import { DEFAULT_REGEN_PROMPT } from '@/lib/interviewPrompts';
 
 const OR_URL   = 'https://openrouter.ai/api/v1/chat/completions';
 const GROQ_URL = 'https://api.groq.com/openai/v1/chat/completions';
@@ -33,7 +34,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'AI 기능을 사용하려면 .env에 API 키를 설정해주세요.' }, { status: 501 });
   }
 
-  const { question_id, question, company_name, recruitment_notice, notes, urls } = await request.json();
+  const { question_id, question, company_name, recruitment_notice, notes, urls, prompt } = await request.json();
 
   if (!question?.trim()) {
     return NextResponse.json({ error: '질문 내용이 없습니다.' }, { status: 400 });
@@ -45,6 +46,11 @@ export async function POST(request: NextRequest) {
   if (notes)              contextParts.push(`기타 사항:\n${notes}`);
   if (urls?.length)       contextParts.push(`참고 URL:\n${(urls as { title: string; url: string }[]).map(u => `- ${u.title}: ${u.url}`).join('\n')}`);
 
+  const template = (prompt as string | undefined)?.trim() || DEFAULT_REGEN_PROMPT;
+  const userContent = template
+    .split('{{context}}').join(contextParts.join('\n\n') || '(정보 없음)')
+    .split('{{question}}').join(question);
+
   const messages = [
     {
       role: 'system',
@@ -54,19 +60,7 @@ export async function POST(request: NextRequest) {
     },
     {
       role: 'user',
-      content: `다음 면접 질문에 대한 모범 답변을 새롭게 작성해주세요.
-
-## 회사/기관 정보
-${contextParts.join('\n\n') || '(정보 없음)'}
-
-## 면접 질문
-${question}
-
-## 작성 조건
-- 4~6문장으로 구체적이고 진정성 있게 작성합니다.
-- STAR 기법(상황·과제·행동·결과)을 자연스럽게 녹여냅니다.
-- 지원자의 강점과 역량이 드러나도록 작성합니다.
-- 답변 내용만 출력합니다.`,
+      content: userContent,
     },
   ];
 

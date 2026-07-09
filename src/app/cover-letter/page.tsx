@@ -2,10 +2,14 @@
 
 import { useState, useEffect, startTransition } from 'react';
 import { supabase, CoverLetterRef, CoverLetterQuestion } from '@/lib/supabase';
+import { Difficulty, DEFAULT_INTERVIEW_PROMPTS, DEFAULT_REGEN_PROMPT } from '@/lib/interviewPrompts';
 
 type DraftUrl = { id?: string; title: string; url: string; sort_order: number };
 
-type Difficulty = 'high' | 'medium' | 'low';
+const PROMPT_STORAGE_KEY = 'interview_prompts_v1';
+const REGEN_PROMPT_STORAGE_KEY = 'interview_regen_prompt_v1';
+type PromptModalKind = Difficulty | 'regen';
+
 interface InterviewQ {
   id:            string;
   difficulty:    Difficulty;
@@ -19,7 +23,11 @@ interface InterviewQ {
   mistakes:      string[];
   sample_answer: string;
 }
-const DIFF_KO: Record<Difficulty, string> = { high: '상', medium: '중', low: '하' };
+const DIFF_KO: Record<Difficulty, string> = {
+  high:   '심층 직무·기술·전략 질문',
+  medium: '경험·역량·직무이해 질문',
+  low:    '자기소개·지원동기·기본인성 질문',
+};
 
 const NAV_H = 'h-[calc(100vh-56px)]';
 
@@ -49,6 +57,38 @@ export default function CoverLetterPage() {
   const [selectedIQId,        setSelectedIQId]        = useState<string | null>(null);
   const [generatingInterview, setGeneratingInterview] = useState<'all' | Difficulty | null>(null);
   const [regeneratingAnswer,  setRegeneratingAnswer]  = useState(false);
+
+  const [interviewPrompts, setInterviewPrompts] = useState<Record<Difficulty, string>>(DEFAULT_INTERVIEW_PROMPTS);
+  const [regenPrompt,      setRegenPrompt]      = useState(DEFAULT_REGEN_PROMPT);
+  const [promptModalKind,  setPromptModalKind]  = useState<PromptModalKind | null>(null);
+  const [promptDraft,      setPromptDraft]      = useState('');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(PROMPT_STORAGE_KEY);
+      if (saved) setInterviewPrompts({ ...DEFAULT_INTERVIEW_PROMPTS, ...JSON.parse(saved) });
+      const savedRegen = localStorage.getItem(REGEN_PROMPT_STORAGE_KEY);
+      if (savedRegen) setRegenPrompt(savedRegen);
+    } catch {}
+  }, []);
+
+  function openPromptModal(kind: PromptModalKind) {
+    setPromptDraft(kind === 'regen' ? regenPrompt : interviewPrompts[kind]);
+    setPromptModalKind(kind);
+  }
+
+  function savePromptDraft() {
+    if (!promptModalKind) return;
+    if (promptModalKind === 'regen') {
+      setRegenPrompt(promptDraft);
+      localStorage.setItem(REGEN_PROMPT_STORAGE_KEY, promptDraft);
+    } else {
+      const next = { ...interviewPrompts, [promptModalKind]: promptDraft };
+      setInterviewPrompts(next);
+      localStorage.setItem(PROMPT_STORAGE_KEY, JSON.stringify(next));
+    }
+    setPromptModalKind(null);
+  }
 
   const selectedRef = refs.find(r => r.id === selectedId) ?? null;
   const selectedQ   = questions.find(q => q.id === selectedQId) ?? null;
@@ -238,6 +278,9 @@ export default function CoverLetterPage() {
           urls:                   urls.map(u => ({ title: u.title, url: u.url })),
           cover_letter_questions: questions.map(q => q.question).filter(Boolean),
           difficulty,
+          prompts: difficulty === 'all'
+            ? interviewPrompts
+            : { [difficulty]: interviewPrompts[difficulty] },
         }),
       });
       const data = await res.json();
@@ -287,6 +330,7 @@ export default function CoverLetterPage() {
           recruitment_notice: selectedRef?.recruitment_notice,
           notes:              selectedRef?.notes,
           urls:               urls.map(u => ({ title: u.title, url: u.url })),
+          prompt:             regenPrompt,
         }),
       });
       const data = await res.json();
@@ -671,15 +715,23 @@ export default function CoverLetterPage() {
 
                           {/* 섹션 헤더 */}
                           <div className="flex items-center justify-between px-4 py-2.5 bg-white">
-                            <span className="text-sm font-bold text-gray-800">난이도 : {DIFF_KO[diff]}</span>
-                            <button
-                              onClick={() => generateInterviewQs(diff)}
-                              disabled={generatingInterview !== null}
-                              className="flex items-center gap-1.5 px-3 py-1 text-sm font-bold border border-gray-300 rounded bg-white hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                            >
-                              {isRunning && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
-                              {isRunning ? '생성 중...' : '질문 생성'}
-                            </button>
+                            <span className="text-sm font-bold text-gray-800">{DIFF_KO[diff]}</span>
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => openPromptModal(diff)}
+                                className="flex items-center gap-1.5 px-3 py-1 text-sm font-bold border border-gray-300 rounded bg-white hover:border-blue-400 hover:text-blue-600 transition-colors"
+                              >
+                                AI 프롬프트
+                              </button>
+                              <button
+                                onClick={() => generateInterviewQs(diff)}
+                                disabled={generatingInterview !== null}
+                                className="flex items-center gap-1.5 px-3 py-1 text-sm font-bold border border-gray-300 rounded bg-white hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                              >
+                                {isRunning && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
+                                {isRunning ? '생성 중...' : '질문 생성'}
+                              </button>
+                            </div>
                           </div>
 
                           {/* 질문 테이블 */}
@@ -747,6 +799,12 @@ export default function CoverLetterPage() {
                     <span className="text-sm font-bold text-gray-700">답변 보기</span>
                     {selectedIQ && (
                       <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openPromptModal('regen')}
+                          className="flex items-center gap-1.5 px-3 py-1 text-sm font-bold border border-gray-300 rounded bg-white hover:border-blue-400 hover:text-blue-600 transition-colors"
+                        >
+                          AI 프롬프트
+                        </button>
                         <button
                           onClick={regenAnswer}
                           disabled={regeneratingAnswer}
@@ -846,6 +904,66 @@ export default function CoverLetterPage() {
           </div>
         )}
       </section>
+
+      {/* ── AI 프롬프트 편집 모달 ─────────────────────────────── */}
+      {promptModalKind && (
+        <div
+          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          onClick={() => setPromptModalKind(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl w-[720px] max-w-[90vw] max-h-[85vh] flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-gray-200">
+              <span className="text-sm font-bold text-gray-800">
+                AI 프롬프트 — {promptModalKind === 'regen' ? '답변 다시생성' : DIFF_KO[promptModalKind]}
+              </span>
+              <button
+                onClick={() => setPromptModalKind(null)}
+                className="text-gray-400 hover:text-gray-700 text-lg leading-none"
+              >✕</button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-5 py-4">
+              <p className="text-xs text-gray-400 mb-2 leading-relaxed">
+                {promptModalKind === 'regen'
+                  ? <>{'{{context}}'} 는 회사/기관 정보로, {'{{question}}'} 는 선택한 면접 질문으로 자동 치환됩니다.</>
+                  : <>{'{{context}}'} 는 회사/기관 정보로, {'{{difficulty}}'} 는 난이도 설명으로 자동 치환됩니다.</>}
+              </p>
+              <textarea
+                value={promptDraft}
+                onChange={e => setPromptDraft(e.target.value)}
+                rows={20}
+                className="w-full px-3 py-2 border border-gray-200 rounded text-xs font-mono text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 resize-y"
+              />
+            </div>
+
+            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-gray-200">
+              <button
+                onClick={() => setPromptDraft(promptModalKind === 'regen' ? DEFAULT_REGEN_PROMPT : DEFAULT_INTERVIEW_PROMPTS[promptModalKind])}
+                className="text-xs text-gray-500 hover:text-red-500 transition-colors"
+              >
+                기본값으로 초기화
+              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPromptModalKind(null)}
+                  className="px-4 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                >
+                  취소
+                </button>
+                <button
+                  onClick={savePromptDraft}
+                  className="px-4 py-1.5 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+                >
+                  저장
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
