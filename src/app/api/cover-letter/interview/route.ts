@@ -69,15 +69,16 @@ function mapRaw(q: Record<string, unknown>, diff: Difficulty, i: number) {
 async function generateForDifficulty(
   diff: Difficulty,
   messages: { role: string; content: string }[],
-): Promise<ReturnType<typeof mapRaw>[]> {
+): Promise<{ questions: ReturnType<typeof mapRaw>[]; model: string | null }> {
   let text: string | null = null;
+  let usedModel: string | null = null;
 
   if (serverEnv.openrouterApiKey) {
     for (const model of OR_MODELS) {
       text = await fetchText(OR_URL, { Authorization: `Bearer ${serverEnv.openrouterApiKey}` }, {
         model, max_tokens: 4000, messages,
       });
-      if (text) break;
+      if (text) { usedModel = model; break; }
     }
   }
 
@@ -85,13 +86,17 @@ async function generateForDifficulty(
     text = await fetchText(GROQ_URL, { Authorization: `Bearer ${serverEnv.groqApiKey}` }, {
       model: GROQ_MODEL, max_tokens: 4000, temperature: 0.7, messages,
     });
+    if (text) usedModel = GROQ_MODEL;
   }
 
-  if (!text) return [];
+  if (!text) return { questions: [], model: null };
   const raw = extractJson(text);
-  if (!raw) return [];
+  if (!raw) return { questions: [], model: usedModel };
 
-  return (raw as Record<string, unknown>[]).slice(0, 10).map((q, i) => mapRaw(q, diff, i));
+  return {
+    questions: (raw as Record<string, unknown>[]).slice(0, 10).map((q, i) => mapRaw(q, diff, i)),
+    model: usedModel,
+  };
 }
 
 export async function POST(request: NextRequest) {
@@ -141,13 +146,15 @@ export async function POST(request: NextRequest) {
 
   // AI 생성 — 순차 실행 (병렬 시 Groq TPM 한도 초과로 중간 난이도 누락 방지)
   const generated: ReturnType<typeof mapRaw>[] = [];
+  const models: Partial<Record<Difficulty, string>> = {};
   for (const diff of difficulties) {
     const result = await generateForDifficulty(diff, makeMessages(diff));
-    generated.push(...result);
+    generated.push(...result.questions);
+    if (result.model) models[diff] = result.model;
   }
 
   if (!ref_id || generated.length === 0) {
-    return NextResponse.json({ questions: generated.map((q, i) => ({ ...q, id: `tmp-${i}` })) });
+    return NextResponse.json({ questions: generated.map((q, i) => ({ ...q, id: `tmp-${i}` })), models });
   }
 
   // DB 저장: 해당 난이도 기존 데이터 삭제 후 신규 삽입
@@ -166,8 +173,8 @@ export async function POST(request: NextRequest) {
 
   if (error || !saved) {
     console.error('[interview] DB 저장 오류:', error);
-    return NextResponse.json({ questions: generated.map((q, i) => ({ ...q, id: `tmp-${i}` })) });
+    return NextResponse.json({ questions: generated.map((q, i) => ({ ...q, id: `tmp-${i}` })), models });
   }
 
-  return NextResponse.json({ questions: saved });
+  return NextResponse.json({ questions: saved, models });
 }

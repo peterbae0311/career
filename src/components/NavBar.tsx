@@ -5,7 +5,7 @@ import { usePathname } from 'next/navigation';
 
 const TABS = [
   {
-    href:  '/cover-letter',
+    href:  '/',
     label: '자기소개서 / 면접 준비',
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -15,7 +15,7 @@ const TABS = [
     ),
   },
   {
-    href:  '/',
+    href:  '/jobs',
     label: '채용 통합 검색',
     icon: (
       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

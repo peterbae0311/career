@@ -50,19 +50,24 @@ function makeRegex(term: string): RegExp {
   return new RegExp(`(?<![a-zA-Z0-9가-힣])${escaped}(?![a-zA-Z0-9가-힣])`, 'i');
 }
 
-export function appendSapGlossary(answer: string): string {
+export function findSapTerms(text: string): [string, string][] {
   const found: [string, string][] = [];
   const seen = new Set<string>();
 
   for (const [term, desc] of GLOSSARY) {
     const key = term.toUpperCase();
     if (seen.has(key)) continue;
-    if (makeRegex(term).test(answer)) {
+    if (makeRegex(term).test(text)) {
       found.push([term, desc]);
       seen.add(key);
     }
   }
 
+  return found;
+}
+
+export function appendSapGlossary(answer: string): string {
+  const found = findSapTerms(answer);
   if (found.length === 0) return answer;
 
   const notes = found.map(([term, desc]) => `• ${term}: ${desc}`).join('\n');
