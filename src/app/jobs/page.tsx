@@ -43,22 +43,26 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-[calc(100vh-56px)] bg-gradient-to-b from-blue-50 to-gray-50">
+    <div className="min-h-[calc(100vh-56px)]">
       {/* 메인 콘텐츠 */}
-      <main className="max-w-6xl mx-auto px-4 py-8 space-y-6">
+      <main className="max-w-[1816px] mx-auto px-4 py-8 space-y-6">
+        <div className="flex items-center justify-between pb-4 border-b border-gray-200/70">
+          <h1 className="text-2xl font-black tracking-tighter text-neutral-900">채용 통합 검색</h1>
+        </div>
+
         <SearchForm onSearch={handleSearch} isLoading={isLoading} />
 
         {/* 로딩 */}
         {isLoading && (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
-            <div className="w-10 h-10 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin" />
+            <div className="w-10 h-10 border-4 border-neutral-200 border-t-neutral-900 rounded-full animate-spin" />
             <p className="text-gray-500 text-sm">4개 사이트에서 채용공고를 검색하고 있습니다...</p>
           </div>
         )}
 
         {/* 에러 */}
         {error && !isLoading && (
-          <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-sm text-red-800 flex items-center gap-2">
+          <div className="bg-red-50/80 backdrop-blur border border-red-200/70 rounded-2xl p-4 text-sm text-red-800 flex items-center gap-2 shadow-sm">
             <svg className="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
@@ -78,13 +82,13 @@ export default function HomePage() {
         {/* 초기 상태 */}
         {!searchState && !isLoading && !error && (
           <div className="flex flex-col items-center justify-center py-24 gap-4 text-center">
-            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center">
-              <svg className="w-8 h-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="w-16 h-16 bg-neutral-200 rounded-2xl flex items-center justify-center shadow-glass">
+              <svg className="w-8 h-8 text-neutral-900" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
             <div>
-              <p className="text-gray-700 font-semibold text-lg">원하는 직무를 검색해보세요</p>
+              <p className="text-gray-800 font-extrabold tracking-tight text-lg">원하는 직무를 검색해보세요</p>
               <p className="text-gray-400 text-sm mt-1">사람인, 워크넷, 원티드, 잡코리아의 채용공고를 한 번에 확인합니다</p>
             </div>
             <div className="flex flex-wrap gap-2 justify-center mt-2">
@@ -92,7 +96,7 @@ export default function HomePage() {
                 <button
                   key={kw}
                   onClick={() => handleSearch({ keyword: kw })}
-                  className="text-sm px-4 py-2 bg-white border border-gray-200 rounded-full text-gray-600 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-colors shadow-sm"
+                  className="text-sm px-4 py-2 bg-white/70 backdrop-blur border border-white/60 rounded-full text-gray-600 hover:bg-neutral-100/70 hover:border-neutral-400 hover:text-neutral-900 hover:-translate-y-0.5 transition-all duration-200 shadow-sm"
                 >
                   {kw}
                 </button>

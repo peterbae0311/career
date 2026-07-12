@@ -30,8 +30,6 @@ const DIFF_KO: Record<Difficulty, string> = {
   low:    '자기소개·지원동기·기본인성 질문',
 };
 
-const NAV_H = 'h-[calc(100vh-56px)]';
-
 function Icon({ d, className = 'w-5 h-5' }: { d: string; className?: string }) {
   return (
     <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -358,23 +356,30 @@ export default function CoverLetterPage() {
   const answerOver = !!(selectedQ?.char_limit && answerLen > selectedQ.char_limit);
 
   return (
-    <div className={`flex ${NAV_H}`}>
+    <div className="min-h-[calc(100vh-56px)] flex flex-col p-4 gap-4">
+
+      {/* ── 페이지 제목 ──────────────────────────────────────────── */}
+      <div className="flex items-center justify-between pb-4 border-b border-gray-200/70">
+        <h1 className="text-2xl font-black tracking-tighter text-neutral-900">자기소개서 / 면접 준비</h1>
+      </div>
+
+      <div className="flex flex-1 gap-4 overflow-hidden">
 
       {/* ── 왼쪽: 회사 목록 ──────────────────────────────────────── */}
-      <aside className="w-[20%] shrink-0 border-r border-gray-200 bg-white flex flex-col">
-        <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between">
+      <aside className="w-[20%] shrink-0 rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-glass flex flex-col overflow-hidden">
+        <div className="px-4 py-3 border-b border-gray-100/80 flex items-center justify-between">
           <span className="text-sm font-semibold text-gray-800">회사</span>
           <div className="flex items-center gap-1.5">
             <button
               onClick={createRef}
-              className="text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5 hover:border-blue-400 hover:text-blue-600 transition-colors"
+              className="text-xs text-gray-600 border border-gray-200/80 rounded-md px-2 py-0.5 hover:border-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60 transition-colors"
             >
               + 추가
             </button>
             <button
               onClick={deleteRef}
               disabled={!selectedId}
-              className="text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5 hover:border-red-400 hover:text-red-500 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="text-xs text-gray-600 border border-gray-200/80 rounded-md px-2 py-0.5 hover:border-red-400 hover:text-red-500 hover:bg-red-50/60 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
             >
               삭제
             </button>
@@ -390,10 +395,10 @@ export default function CoverLetterPage() {
             <li key={ref.id}>
               <button
                 onClick={() => { setSelectedId(ref.id); setTab('ref'); }}
-                className={`w-full text-left pr-4 pl-3 py-2.5 border-b border-gray-100 border-l-4 text-sm font-bold truncate transition-colors ${
+                className={`w-full text-left pr-4 pl-3 py-2.5 border-b border-gray-100/70 border-l-4 text-sm font-bold truncate transition-all duration-200 ${
                   selectedId === ref.id
-                    ? 'bg-blue-100 border-l-blue-500 text-blue-700'
-                    : 'text-gray-700 hover:bg-gray-50 border-l-transparent'
+                    ? 'bg-neutral-100 border-l-neutral-900 text-neutral-900'
+                    : 'text-gray-700 hover:bg-white/70 border-l-transparent'
                 }`}
               >
                 {ref.company_name}
@@ -404,11 +409,11 @@ export default function CoverLetterPage() {
       </aside>
 
       {/* ── 오른쪽: 상세 영역 ─────────────────────────────────────── */}
-      <section className="flex-1 flex flex-col overflow-hidden bg-white">
+      <section className="flex-1 flex flex-col overflow-hidden rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-glass">
         {!selectedId ? (
           <div className="flex flex-col items-center justify-center flex-1 text-gray-400 gap-3">
-            <div className="w-16 h-16 bg-gray-100 rounded-2xl flex items-center justify-center">
-              <Icon d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" className="w-8 h-8 text-gray-300" />
+            <div className="w-16 h-16 bg-neutral-200 rounded-2xl flex items-center justify-center">
+              <Icon d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" className="w-8 h-8 text-neutral-400" />
             </div>
             <p className="text-sm">왼쪽에서 회사를 선택하거나 추가하세요</p>
           </div>
@@ -416,14 +421,14 @@ export default function CoverLetterPage() {
           <div className="flex flex-col flex-1 overflow-hidden">
 
             {/* ── 탭 헤더 ────────────────────────────────────────── */}
-            <div className="shrink-0 border-b border-gray-200 flex">
+            <div className="shrink-0 border-b border-gray-100/80 flex">
               {([['ref', '기본 정보'], ['questions', '자기소개서 질문'], ['interview', '면접 예상 질문']] as const).map(([id, label]) => (
                 <button
                   key={id}
                   onClick={() => setTab(id)}
-                  className={`px-12 py-3 text-sm font-bold border-b-2 transition-colors ${
+                  className={`px-12 py-3 text-sm font-extrabold tracking-tight border-b-2 transition-all duration-200 ${
                     tab === id
-                      ? 'border-blue-500 text-blue-700'
+                      ? 'border-neutral-900 text-neutral-900'
                       : 'border-transparent text-gray-400 hover:text-gray-700'
                   }`}
                 >
@@ -442,7 +447,7 @@ export default function CoverLetterPage() {
                   </colgroup>
                   <tbody>
                     {/* 모집 요강 */}
-                    <tr className="bg-white">
+                    <tr className="bg-white/40">
                       <td className="pl-4 pr-3 py-4 text-right text-sm font-semibold text-gray-700 whitespace-nowrap align-top pt-5">
                         모집 요강 <span className="text-red-500">*</span>
                       </td>
@@ -451,42 +456,42 @@ export default function CoverLetterPage() {
                           value={refForm.recruitment_notice}
                           onChange={e => setRefForm(f => ({ ...f, recruitment_notice: e.target.value }))}
                           rows={17}
-                          className="w-full px-3 py-2 border border-gray-200 rounded text-sm text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 resize-y"
+                          className="w-full px-3 py-2 border border-gray-200/80 bg-white/60 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 resize-y transition-colors"
                           placeholder="모집 직무, 자격 요건, 우대 사항 등을 입력하세요"
                         />
                       </td>
                     </tr>
 
                     {/* 참고 URL */}
-                    <tr className="bg-gray-50">
+                    <tr className="bg-neutral-100/20">
                       <td className="pl-4 pr-3 py-4 text-right text-sm font-semibold text-gray-700 whitespace-nowrap align-top pt-5">
                         참고 URL
                       </td>
                       <td className="pl-3 py-4 pr-8">
-                        <div className="border border-gray-200 rounded text-sm">
+                        <div className="border border-gray-200/80 rounded-lg text-sm overflow-hidden bg-white/50">
                           {/* 헤더 */}
-                          <div className="flex bg-blue-50 border-b border-blue-100 rounded-t">
-                            <div className="w-44 shrink-0 px-4 py-2 text-center font-medium text-blue-700 border-r border-blue-100">명칭</div>
-                            <div className="flex-1 px-4 py-2 text-center font-medium text-blue-700 border-r border-blue-100">URL</div>
-                            <div className="w-20 shrink-0 px-3 py-2 text-center font-medium text-blue-700 whitespace-nowrap">추가/삭제</div>
+                          <div className="flex bg-neutral-100 border-b border-neutral-200/70">
+                            <div className="w-44 shrink-0 px-4 py-2 text-center font-medium text-neutral-900 border-r border-neutral-200/70">명칭</div>
+                            <div className="flex-1 px-4 py-2 text-center font-medium text-neutral-900 border-r border-neutral-200/70">URL</div>
+                            <div className="w-20 shrink-0 px-3 py-2 text-center font-medium text-neutral-900 whitespace-nowrap">추가/삭제</div>
                           </div>
                           {/* 행 목록 — 3행 초과 시 스크롤 */}
                           <div className="overflow-y-auto" style={{ maxHeight: '108px' }}>
                             {urls.map((u, i) => (
                               <div key={i} className="flex border-b border-gray-100 last:border-0">
-                                <div className="w-44 shrink-0 px-2 py-1 border-r border-gray-200">
+                                <div className="w-44 shrink-0 px-2 py-1 border-r border-gray-200/70">
                                   <input
                                     value={u.title}
                                     onChange={e => setUrls(us => us.map((x, j) => j === i ? { ...x, title: e.target.value } : x))}
-                                    className="w-full px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                                    className="w-full px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-neutral-500 rounded transition-colors"
                                     placeholder="명칭"
                                   />
                                 </div>
-                                <div className="flex-1 px-2 py-1 border-r border-gray-200 flex items-center gap-1">
+                                <div className="flex-1 px-2 py-1 border-r border-gray-200/70 flex items-center gap-1">
                                   <input
                                     value={u.url}
                                     onChange={e => setUrls(us => us.map((x, j) => j === i ? { ...x, url: e.target.value } : x))}
-                                    className="flex-1 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-400 rounded"
+                                    className="flex-1 px-2 py-1 text-sm text-gray-700 focus:outline-none focus:ring-1 focus:ring-neutral-500 rounded transition-colors"
                                     placeholder="https://..."
                                   />
                                   {u.url && (
@@ -494,7 +499,7 @@ export default function CoverLetterPage() {
                                       href={u.url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="shrink-0 text-gray-400 hover:text-blue-500 transition-colors"
+                                      className="shrink-0 text-gray-400 hover:text-neutral-900 transition-colors"
                                       title="새 탭에서 열기"
                                       onClick={e => e.stopPropagation()}
                                     >
@@ -505,7 +510,7 @@ export default function CoverLetterPage() {
                                 <div className="w-20 shrink-0 px-2 py-1 text-center whitespace-nowrap flex items-center justify-center gap-0.5">
                                   <button
                                     onClick={() => setUrls(us => [...us, { title: '', url: '', sort_order: us.length }])}
-                                    className="text-gray-500 hover:text-blue-600 text-lg leading-none p-1.5 rounded hover:bg-blue-50 transition-colors"
+                                    className="text-gray-500 hover:text-neutral-900 text-lg leading-none p-1.5 rounded hover:bg-neutral-100 transition-colors"
                                     title="행 추가"
                                   >⊕</button>
                                   <button
@@ -522,7 +527,7 @@ export default function CoverLetterPage() {
                     </tr>
 
                     {/* 특이 사항 */}
-                    <tr className="bg-white">
+                    <tr className="bg-white/40">
                       <td className="pl-4 pr-3 py-4 text-right text-sm font-semibold text-gray-700 whitespace-nowrap align-top pt-5">
                         특이 사항
                       </td>
@@ -531,7 +536,7 @@ export default function CoverLetterPage() {
                           value={refForm.notes}
                           onChange={e => setRefForm(f => ({ ...f, notes: e.target.value }))}
                           rows={5}
-                          className="w-full px-3 py-2 border border-gray-200 rounded text-sm text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 resize-y"
+                          className="w-full px-3 py-2 border border-gray-200/80 bg-white/60 rounded-lg text-sm text-gray-700 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 resize-y transition-colors"
                           placeholder="지원 동기, 추가 메모 등"
                         />
                       </td>
@@ -540,11 +545,11 @@ export default function CoverLetterPage() {
                 </table>
 
                 {/* 저장 버튼 */}
-                <div className="flex justify-end px-8 py-5 border-t border-gray-200">
+                <div className="flex justify-end px-8 py-5 border-t border-gray-100/80">
                   <button
                     onClick={saveRef}
                     disabled={savingRef || !refForm.company_name.trim()}
-                    className="px-6 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 transition-colors"
+                    className="px-6 py-2 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white text-sm font-medium rounded-lg shadow-glow-dark hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:shadow-none transition-all duration-200"
                   >
                     {savingRef ? '저장 중...' : '저장'}
                   </button>
@@ -557,11 +562,11 @@ export default function CoverLetterPage() {
               <div className="flex flex-col flex-1 overflow-hidden">
 
                 {/* AI 작성 버튼 */}
-                <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-gray-200 bg-gray-50">
+                <div className="shrink-0 flex items-center gap-3 px-4 py-2.5 border-b border-gray-100/80 bg-white/40">
                   <button
                     onClick={generateAnswer}
                     disabled={!selectedQId || generatingQId !== null}
-                    className="shrink-0 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="shrink-0 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white text-sm font-medium rounded-lg shadow-glow-dark hover:shadow-lg hover:-translate-y-0.5 disabled:opacity-50 disabled:hover:translate-y-0 disabled:shadow-none disabled:cursor-not-allowed transition-all duration-200"
                   >
                     {generatingQId ? (
                       <><span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />AI 작성 중...</>
@@ -577,17 +582,17 @@ export default function CoverLetterPage() {
                 <div className="shrink-0 overflow-y-auto" style={{ maxHeight: '45%' }}>
                   <table className="w-full border-collapse text-sm">
                     <thead className="sticky top-0 z-10">
-                      <tr className="bg-blue-50 border-b border-blue-100">
-                        <th className="w-10 px-3 py-2 border-r border-blue-100">
+                      <tr className="bg-neutral-100 border-b border-neutral-200/70">
+                        <th className="w-10 px-3 py-2 border-r border-neutral-200/70">
                           <span className="sr-only">선택</span>
                         </th>
-                        <th className="px-4 py-2 text-center font-medium text-blue-700 border-r border-blue-100">
+                        <th className="px-4 py-2 text-center font-medium text-neutral-900 border-r border-neutral-200/70">
                           질문
                         </th>
-                        <th className="w-28 px-3 py-2 text-center font-medium text-blue-700 border-r border-blue-100">
+                        <th className="w-28 px-3 py-2 text-center font-medium text-neutral-900 border-r border-neutral-200/70">
                           글자수 제한
                         </th>
-                        <th className="w-24 px-3 py-2 text-center font-medium text-blue-700 whitespace-nowrap">
+                        <th className="w-24 px-3 py-2 text-center font-medium text-neutral-900 whitespace-nowrap">
                           추가/삭제
                         </th>
                       </tr>
@@ -597,19 +602,19 @@ export default function CoverLetterPage() {
                         <tr
                           key={q.id}
                           onClick={() => setSelectedQId(q.id)}
-                          className={`border-b border-gray-200 cursor-pointer transition-colors ${
-                            selectedQId === q.id ? 'bg-yellow-50' : 'hover:bg-gray-50'
+                          className={`border-b border-gray-100/80 cursor-pointer transition-colors ${
+                            selectedQId === q.id ? 'bg-amber-50/80' : 'hover:bg-white/60'
                           }`}
                         >
-                          <td className="px-3 py-2 text-center border-r border-gray-200" onClick={e => e.stopPropagation()}>
+                          <td className="px-3 py-2 text-center border-r border-gray-100/80" onClick={e => e.stopPropagation()}>
                             <input
                               type="checkbox"
                               checked={selectedQId === q.id}
                               onChange={() => setSelectedQId(selectedQId === q.id ? null : q.id)}
-                              className="w-4 h-4 accent-blue-600"
+                              className="w-4 h-4 accent-neutral-900"
                             />
                           </td>
-                          <td className="px-4 py-2 border-r border-gray-200" onClick={() => setSelectedQId(q.id)}>
+                          <td className="px-4 py-2 border-r border-gray-100/80" onClick={() => setSelectedQId(q.id)}>
                             <input
                               value={q.question}
                               onChange={e => updateQuestionLocal(q.id, { question: e.target.value })}
@@ -621,7 +626,7 @@ export default function CoverLetterPage() {
                               placeholder="자기소개서 문항을 입력하세요"
                             />
                           </td>
-                          <td className="px-3 py-2 text-center border-r border-gray-200" onClick={() => setSelectedQId(q.id)}>
+                          <td className="px-3 py-2 text-center border-r border-gray-100/80" onClick={() => setSelectedQId(q.id)}>
                             <input
                               type="number"
                               value={q.char_limit ?? ''}
@@ -631,25 +636,25 @@ export default function CoverLetterPage() {
                                 if (latest) saveQuestion(latest);
                               }}
                               min={0}
-                              className="w-16 px-2 py-0.5 border border-gray-200 rounded text-sm text-center text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400"
+                              className="w-16 px-2 py-0.5 border border-gray-200/80 rounded text-sm text-center text-gray-700 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 transition-colors"
                               placeholder="없음"
                             />
                           </td>
                           <td className="px-3 py-2 text-center" onClick={e => e.stopPropagation()}>
-                            <button onClick={addQuestion} className="text-gray-500 hover:text-blue-600 text-lg leading-none p-1.5 rounded hover:bg-blue-50 transition-colors" title="행 추가">⊕</button>
+                            <button onClick={addQuestion} className="text-gray-500 hover:text-neutral-900 text-lg leading-none p-1.5 rounded hover:bg-neutral-100 transition-colors" title="행 추가">⊕</button>
                             <button onClick={() => deleteQuestion(q.id)} className="text-gray-500 hover:text-red-500 text-lg leading-none p-1.5 rounded hover:bg-red-50 transition-colors" title="삭제">⊖</button>
                           </td>
                         </tr>
                       ))}
                       {/* 하단 빈 행 */}
-                      <tr className="border-b border-gray-100">
-                        <td className="px-3 py-2 border-r border-gray-200" />
-                        <td className="px-4 py-2 border-r border-gray-200 text-gray-400 text-xs">
+                      <tr className="border-b border-gray-100/80">
+                        <td className="px-3 py-2 border-r border-gray-100/80" />
+                        <td className="px-4 py-2 border-r border-gray-100/80 text-gray-400 text-xs">
                           {questions.length === 0 && '오른쪽 ⊕ 버튼으로 문항을 추가하세요'}
                         </td>
-                        <td className="px-3 py-2 border-r border-gray-200" />
+                        <td className="px-3 py-2 border-r border-gray-100/80" />
                         <td className="px-3 py-2 text-center">
-                          <button onClick={addQuestion} className="text-gray-500 hover:text-blue-600 text-lg leading-none p-1.5 rounded hover:bg-blue-50 transition-colors" title="행 추가">⊕</button>
+                          <button onClick={addQuestion} className="text-gray-500 hover:text-neutral-900 text-lg leading-none p-1.5 rounded hover:bg-neutral-100 transition-colors" title="행 추가">⊕</button>
                         </td>
                       </tr>
                     </tbody>
@@ -657,7 +662,7 @@ export default function CoverLetterPage() {
                 </div>
 
                 {/* 구분선 */}
-                <div className="shrink-0 border-t border-gray-200" />
+                <div className="shrink-0 border-t border-gray-100/80" />
 
                 {/* 질의 답변 패널 */}
                 <div className="flex-1 flex flex-col px-6 py-4 overflow-hidden min-h-0">
@@ -668,7 +673,7 @@ export default function CoverLetterPage() {
                         if (selectedQ?.answer) await navigator.clipboard.writeText(selectedQ.answer);
                       }}
                       disabled={!selectedQ?.answer}
-                      className="p-1 text-gray-400 hover:text-gray-700 disabled:opacity-30 transition-colors rounded"
+                      className="p-1 text-gray-400 hover:text-neutral-900 disabled:opacity-30 transition-colors rounded"
                       title="복사"
                     >
                       <Icon d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" className="w-4 h-4" />
@@ -684,10 +689,10 @@ export default function CoverLetterPage() {
                           const latest = questions.find(x => x.id === selectedQ.id);
                           if (latest) saveQuestion(latest);
                         }}
-                        className={`flex-1 w-full px-4 py-3 border rounded text-base text-gray-800 focus:outline-none focus:ring-1 resize-none ${
+                        className={`flex-1 w-full px-4 py-3 border rounded-lg text-base text-gray-800 focus:outline-none focus:ring-1 resize-none transition-colors ${
                           answerOver
-                            ? 'border-red-300 focus:ring-red-400 bg-red-50'
-                            : 'border-gray-200 focus:border-blue-400 focus:ring-blue-400 bg-blue-50/30'
+                            ? 'border-red-300 focus:ring-red-400 bg-red-50/70'
+                            : 'border-gray-200/80 focus:border-neutral-500 focus:ring-neutral-500 bg-neutral-100/20'
                         }`}
                         placeholder="답변을 직접 입력하거나 위 AI 작성 버튼을 클릭하세요"
                       />
@@ -700,7 +705,7 @@ export default function CoverLetterPage() {
                       )}
                     </div>
                   ) : (
-                    <div className="min-h-[100px] border border-gray-200 rounded flex items-center justify-center text-gray-400 text-sm">
+                    <div className="min-h-[100px] border border-gray-200/80 rounded-lg flex items-center justify-center text-gray-400 text-sm bg-white/40">
                       위 목록에서 문항을 선택하세요
                     </div>
                   )}
@@ -720,10 +725,10 @@ export default function CoverLetterPage() {
                       const dqs = interviewQs.filter(q => q.difficulty === diff);
                       const isRunning = generatingInterview === diff;
                       return (
-                        <div key={diff} className="border-b-2 border-gray-300">
+                        <div key={diff} className="border-b-2 border-gray-200/70">
 
                           {/* 섹션 헤더 */}
-                          <div className="flex items-center justify-between px-4 py-2.5 bg-white">
+                          <div className="flex items-center justify-between px-4 py-2.5 bg-white/40">
                             <span className="text-sm font-bold text-gray-800">{DIFF_KO[diff]}</span>
                             <div className="flex items-center gap-1.5">
                               {interviewModels[diff] && (
@@ -733,14 +738,14 @@ export default function CoverLetterPage() {
                               )}
                               <button
                                 onClick={() => openPromptModal(diff)}
-                                className="text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                                className="text-xs text-gray-600 border border-gray-200/80 rounded-md px-2 py-0.5 hover:border-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60 transition-colors"
                               >
                                 AI 프롬프트
                               </button>
                               <button
                                 onClick={() => generateInterviewQs(diff)}
                                 disabled={generatingInterview !== null}
-                                className="flex items-center gap-1 text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5 hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                                className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200/80 rounded-md px-2 py-0.5 hover:border-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                               >
                                 {isRunning && <span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />}
                                 {isRunning ? '생성 중...' : '질문 생성'}
@@ -751,8 +756,8 @@ export default function CoverLetterPage() {
                           {/* 질문 테이블 */}
                           <table className="w-full border-collapse text-sm">
                             <thead>
-                              <tr className="bg-gray-100 border-y border-gray-200">
-                                <th className="w-12 px-3 py-1.5 text-center font-medium text-gray-600 border-r border-gray-200">NO</th>
+                              <tr className="bg-gray-50/70 border-y border-gray-100/80">
+                                <th className="w-12 px-3 py-1.5 text-center font-medium text-gray-600 border-r border-gray-100/80">NO</th>
                                 <th className="px-4 py-1.5 text-center font-medium text-gray-600">예상 질문</th>
                               </tr>
                             </thead>
@@ -762,12 +767,12 @@ export default function CoverLetterPage() {
                                 return (
                                   <tr
                                     key={q?.id ?? `empty-${diff}-${i}`}
-                                    className={`border-b border-gray-100 transition-colors ${
-                                      selectedIQId === q?.id ? 'bg-yellow-50' : q ? 'hover:bg-gray-50' : ''
+                                    className={`border-b border-gray-100/80 transition-colors ${
+                                      selectedIQId === q?.id ? 'bg-amber-50/80' : q ? 'hover:bg-white/60' : ''
                                     }`}
                                   >
                                     <td
-                                      className="px-3 py-2 text-center text-gray-400 border-r border-gray-100 whitespace-nowrap cursor-pointer"
+                                      className="px-3 py-2 text-center text-gray-400 border-r border-gray-100/80 whitespace-nowrap cursor-pointer"
                                       onClick={() => q && setSelectedIQId(q.id)}
                                     >{i + 1}</td>
                                     <td className="px-4 py-1.5 text-gray-700">
@@ -815,26 +820,26 @@ export default function CoverLetterPage() {
                 </div>
 
                 {/* 구분선 */}
-                <div className="w-px bg-gray-200 shrink-0" />
+                <div className="w-px bg-gray-100/80 shrink-0" />
 
                 {/* 오른쪽: 답변 보기 */}
                 <div className="flex flex-col flex-1 overflow-hidden">
 
                   {/* 헤더 */}
-                  <div className="shrink-0 px-4 py-2.5 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                  <div className="shrink-0 px-4 py-2.5 border-b border-gray-100/80 bg-white/40 flex items-center justify-between">
                     <span className="text-sm font-bold text-gray-700">답변 보기</span>
                     {selectedIQ && (
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => openPromptModal('regen')}
-                          className="text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5 hover:border-blue-400 hover:text-blue-600 transition-colors"
+                          className="text-xs text-gray-600 border border-gray-200/80 rounded-md px-2 py-0.5 hover:border-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60 transition-colors"
                         >
                           AI 프롬프트
                         </button>
                         <button
                           onClick={regenAnswer}
                           disabled={regeneratingAnswer}
-                          className="flex items-center gap-1 text-xs text-gray-600 border border-gray-300 rounded px-2 py-0.5 hover:border-blue-400 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          className="flex items-center gap-1 text-xs text-gray-600 border border-gray-200/80 rounded-md px-2 py-0.5 hover:border-neutral-500 hover:text-neutral-900 hover:bg-neutral-100/60 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                         >
                           {regeneratingAnswer
                             ? <><span className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" />생성 중...</>
@@ -858,7 +863,7 @@ export default function CoverLetterPage() {
                             ].filter(Boolean).join('\n');
                             navigator.clipboard.writeText(text);
                           }}
-                          className="p-1 text-gray-400 hover:text-gray-700 transition-colors rounded"
+                          className="p-1 text-gray-400 hover:text-neutral-900 transition-colors rounded"
                           title="클립보드 복사"
                         >
                           <Icon d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" className="w-4 h-4" />
@@ -877,7 +882,7 @@ export default function CoverLetterPage() {
                         </div>
                         {selectedIQSapTerms.length > 0 && (
                           <>
-                            <hr className="border-gray-300" />
+                            <hr className="border-gray-100" />
                             <div>
                               <p className="font-bold text-gray-800 mb-2">SAP 용어 설명</p>
                               <ul className="space-y-1">
@@ -892,7 +897,7 @@ export default function CoverLetterPage() {
                         )}
                         {selectedIQ.follow_ups.length > 0 && (
                           <>
-                            <hr className="border-gray-300" />
+                            <hr className="border-gray-100" />
                             <div>
                               <p className="font-bold text-gray-800 mb-2">꼬리 질문</p>
                               <ul className="space-y-1">
@@ -950,23 +955,25 @@ export default function CoverLetterPage() {
         )}
       </section>
 
+      </div>
+
       {/* ── AI 프롬프트 편집 모달 ─────────────────────────────── */}
       {promptModalKind && (
         <div
-          className="fixed inset-0 bg-black/40 flex items-center justify-center z-50"
+          className="fixed inset-0 bg-neutral-950/30 backdrop-blur-sm flex items-center justify-center z-50"
           onClick={() => setPromptModalKind(null)}
         >
           <div
-            className="bg-white rounded-lg shadow-xl w-[720px] max-w-[90vw] max-h-[85vh] flex flex-col"
+            className="bg-white/90 backdrop-blur-2xl rounded-2xl border border-white/60 shadow-glass-lg w-[720px] max-w-[90vw] max-h-[85vh] flex flex-col"
             onClick={e => e.stopPropagation()}
           >
-            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-gray-200">
+            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-b border-gray-100/80">
               <span className="text-sm font-bold text-gray-800">
                 AI 프롬프트 — {promptModalKind === 'regen' ? '답변 다시생성' : DIFF_KO[promptModalKind]}
               </span>
               <button
                 onClick={() => setPromptModalKind(null)}
-                className="text-gray-400 hover:text-gray-700 text-lg leading-none"
+                className="text-gray-400 hover:text-gray-700 text-lg leading-none transition-colors"
               >✕</button>
             </div>
 
@@ -980,11 +987,11 @@ export default function CoverLetterPage() {
                 value={promptDraft}
                 onChange={e => setPromptDraft(e.target.value)}
                 rows={20}
-                className="w-full px-3 py-2 border border-gray-200 rounded text-xs font-mono text-gray-700 focus:outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-400 resize-y"
+                className="w-full px-3 py-2 border border-gray-200/80 bg-white/60 rounded-lg text-xs font-mono text-gray-700 focus:outline-none focus:border-neutral-500 focus:ring-1 focus:ring-neutral-500 resize-y transition-colors"
               />
             </div>
 
-            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-gray-200">
+            <div className="shrink-0 flex items-center justify-between px-5 py-3 border-t border-gray-100/80">
               <button
                 onClick={() => setPromptDraft(promptModalKind === 'regen' ? DEFAULT_REGEN_PROMPT : DEFAULT_INTERVIEW_PROMPTS[promptModalKind])}
                 className="text-xs text-gray-500 hover:text-red-500 transition-colors"
@@ -994,13 +1001,13 @@ export default function CoverLetterPage() {
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setPromptModalKind(null)}
-                  className="px-4 py-1.5 text-sm text-gray-600 border border-gray-300 rounded hover:bg-gray-50 transition-colors"
+                  className="px-4 py-1.5 text-sm text-gray-600 border border-gray-200/80 rounded-lg hover:bg-gray-50 transition-colors"
                 >
                   취소
                 </button>
                 <button
                   onClick={savePromptDraft}
-                  className="px-4 py-1.5 text-sm text-white bg-blue-600 rounded hover:bg-blue-700 transition-colors"
+                  className="px-4 py-1.5 text-sm text-white bg-gradient-to-r from-neutral-900 to-neutral-800 rounded-lg shadow-glow-dark hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200"
                 >
                   저장
                 </button>

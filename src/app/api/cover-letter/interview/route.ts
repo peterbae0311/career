@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { serverEnv } from '@/lib/env.server';
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { DIFF_LABEL, DEFAULT_INTERVIEW_PROMPT, type Difficulty } from '@/lib/interviewPrompts';
 
 const OR_URL   = 'https://openrouter.ai/api/v1/chat/completions';
@@ -204,6 +204,7 @@ export async function POST(request: NextRequest) {
 
   // DB 저장: 해당 난이도 기존 데이터 삭제 후 신규 삽입
   // Supabase 쿼리 빌더는 immutable — 분기별로 별도 체인 사용
+  const supabase = await createServerSupabaseClient();
   if (difficulty === 'all') {
     await supabase.from('interview_questions').delete().eq('ref_id', ref_id);
   } else {

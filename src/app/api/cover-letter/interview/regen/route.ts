@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { serverEnv } from '@/lib/env.server';
-import { supabase } from '@/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabaseServer';
 import { DEFAULT_REGEN_PROMPT } from '@/lib/interviewPrompts';
 
 const OR_URL   = 'https://openrouter.ai/api/v1/chat/completions';
@@ -123,6 +123,7 @@ export async function POST(request: NextRequest) {
 
   // DB 업데이트
   if (question_id && !question_id.startsWith('tmp-')) {
+    const supabase = await createServerSupabaseClient();
     await supabase
       .from('interview_questions')
       .update({ sample_answer })

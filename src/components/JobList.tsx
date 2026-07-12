@@ -29,7 +29,7 @@ export default function JobList({ results, total, isDemo }: Props) {
     <div className="space-y-4">
       {/* 데모 모드 안내 */}
       {isDemo && (
-        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl p-4 text-sm text-amber-800">
+        <div className="flex items-start gap-3 bg-amber-50/80 backdrop-blur border border-amber-200/70 rounded-2xl p-4 text-sm text-amber-800 shadow-sm">
           <svg className="w-5 h-5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
@@ -52,19 +52,19 @@ export default function JobList({ results, total, isDemo }: Props) {
       </div>
 
       {/* 사이트별 탭 */}
-      <div className="flex gap-1 bg-gray-100 p-1 rounded-xl">
+      <div className="flex gap-1 bg-white/50 backdrop-blur border border-white/50 p-1 rounded-xl shadow-sm">
         {tabs.map(tab => (
           <button
             key={tab.id}
             onClick={() => setActiveTab(tab.id)}
-            className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex-1 py-2 px-2 rounded-lg text-sm font-medium transition-all duration-200 ${
               activeTab === tab.id
                 ? 'bg-white text-gray-900 shadow-sm'
                 : 'text-gray-500 hover:text-gray-700'
             }`}
           >
             {tab.label}
-            <span className={`ml-1 text-xs ${activeTab === tab.id ? 'text-blue-600' : 'text-gray-400'}`}>
+            <span className={`ml-1 text-xs ${activeTab === tab.id ? 'text-neutral-900' : 'text-gray-400'}`}>
               {tab.count}
             </span>
             {tab.error && <span className="ml-1 text-xs text-red-400">!</span>}
@@ -74,7 +74,7 @@ export default function JobList({ results, total, isDemo }: Props) {
 
       {/* 채용공고 그리드 */}
       {activeJobs.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {activeJobs.map(job => (
             <JobCard key={job.id} job={job} />
           ))}

@@ -4,7 +4,7 @@ export default function JobCard({ job }: { job: Job }) {
   const color = SOURCE_COLORS[job.source];
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-5 flex flex-col gap-3 h-full">
+    <div className="bg-white/70 backdrop-blur-xl rounded-2xl border border-white/60 shadow-sm hover:shadow-glass-lg hover:-translate-y-1 transition-all duration-200 p-5 flex flex-col gap-3 h-full">
       {/* 출처 배지 + 고용형태 */}
       <div className="flex items-center justify-between gap-2">
         <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${color.bg} ${color.text} ${color.border}`}>
@@ -72,7 +72,7 @@ export default function JobCard({ job }: { job: Job }) {
           href={job.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-xs font-semibold text-blue-600 hover:text-blue-800 transition-colors"
+          className="text-xs font-semibold text-neutral-900 hover:text-neutral-950 transition-colors"
         >
           공고 보기 →
         </a>
