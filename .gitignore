@@ -35,8 +35,13 @@ yarn-error.log*
 
 # screenshots & conversation logs
 화면\ 캡처\ *.png
-2026-*-command-message*.txt
-2026-*-local-command-caveat*.txt
+2026-*.txt
+
+# 개인 자료 / 참고 자료 (업로드 금지)
+설계/
+참고/
+기능개발.txt
+\# AI 에이전트 역할 (Role).txt
 
 # vercel
 .vercel
